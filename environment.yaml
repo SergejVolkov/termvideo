@@ -1,0 +1,12 @@
+name: termvideo
+channels:
+  - defaults
+dependencies:
+  - python=3.8.13
+  - pip
+  - numpy=1.21.5
+  - pip:
+    - ffmpeg-python
+    - playsound==1.2.2
+    - pyaudio
+    - colorama

@@ -1,0 +1,12 @@
+USAGE
+
+python termvideo.py FILENAME [OPTIONS]
+
+       --cmap=CMAP_NAME
+              color mapping function from RGB to indexed color (default common, see colors.cmap module for available mappings)
+
+       --stats
+              show debug statistics after playing the video (useful for profiling)
+
+       -h, --help
+              show manual

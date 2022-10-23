@@ -21,7 +21,7 @@ class Command(list):
     """
 
     def __init__(self, input: str):
-        super(Command, self).__init__()
+        super().__init__()
         begin = 0
         while begin < len(input):
             while begin < len(input) and input[begin] == " ":

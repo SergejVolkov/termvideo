@@ -2,10 +2,6 @@ import math
 import numpy as np
 
 
-def ceil(x, y):
-    return int(math.ceil(x / y))
-
-
 def pool2d(x, kernel, method= "max", pad=False):
     """
     Non-overlapping pooling on 2D or 3D data.
@@ -24,9 +20,11 @@ def pool2d(x, kernel, method= "max", pad=False):
         result: pooled matrix.
 
     """
-
     m, n = x.shape[:2]
     ky, kx = kernel
+
+    def ceil(x, y):
+        return int(math.ceil(x / y))
 
     if pad:
         ny = ceil(m, ky)

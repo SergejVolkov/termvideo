@@ -4,9 +4,11 @@ import ffmpeg
 
 from multiprocessing import freeze_support
 
-from lib.utils import init_terminal, reset_terminal
-from lib.video import TerminalVideoCapture, perf_counter_ms
-from lib.command import Command, CmapParser
+from lib.utils import get_manual, term_capture
+from lib.video import ASCIIVideoCapture
+from lib.scale import Scale
+from lib.profile import Profile
+from lib.command import Command, CmapParser, ScaleParser, StatsParser, HelpParser
 
 
 if __name__ == "__main__":
@@ -14,54 +16,59 @@ if __name__ == "__main__":
 
     # Parse command options
     cmd = Command(" ".join(sys.argv))
-    options, args = cmd.parse_options(parsers=[CmapParser()])
-    cmap = options[0]
+    (cmap, scale, stats, help), args = cmd.parse_options(
+        parsers=[CmapParser(), ScaleParser(), StatsParser(), HelpParser()]
+    )
+
+    # Print help note
+    if help or len(args) == 0:
+        print(get_manual(), end="")
+        exit()
+
+    # Path to video file
     path = args[0]
 
-    # Init terminal
-    init_terminal()
+    # Profiler
+    profiler = Profile(enabled=stats)
+
+    # Video scaling
+    out_size = None
+    if scale == Scale.STRETCH:
+        term_size = os.get_terminal_size()
+        out_size = term_size.columns, term_size.lines
+    elif scale == Scale.CROP:
+        raise NotImplementedError(f"scaling method {scale} not implemented")
 
     try:
-        # Create video stream
-        term_size = os.get_terminal_size()
-        cap = TerminalVideoCapture(path,
-                                   term_size.columns,
-                                   cmap=cmap,
-                                   debug_stats=True)
-        # Resize terminal window
-        os.system(f"mode {cap.out_w},{cap.out_h}")
-
-        # Play video
-        i = 0
-        display = 0
-        tstart = perf_counter_ms()
-        for frame in cap:
-            start = perf_counter_ms()
-            print(frame, end="")
-            sys.stdout.flush()
-            display += perf_counter_ms() - start
-            i += 1
-            if i > 100:
-                break
-
-        # Close stream
-        cap.release()
+        # Capture video and init terminal
+        with ASCIIVideoCapture(
+            path,
+            out_size,
+            cmap=cmap,
+            profiler=profiler
+        ) as cap, term_capture(cap.out_w, cap.out_h), profiler["total"]:
+            # Play video
+            for frame in cap:
+                with profiler["display"]:
+                    print(frame, end="")
+                    sys.stdout.flush()
     except ffmpeg.Error as e:
-        reset_terminal()
+        # Handle ffmpeg exceptions
+        reraise = True
         try:
-            print(e.stderr.decode("ascii"))
+            msg = e.stderr.decode("ascii")[:-1]
+            if "No such file or directory" in msg:
+                reraise = False
+            print(msg)
         except AttributeError:
             pass
-        raise e
-    except BaseException as e:
-        reset_terminal()
-        raise e
-
-    # Print stats
-    total = (perf_counter_ms() - tstart) / i
-    display /= i
-    print(*["%s: %.1f" % (key, val) for key, val in cap.debug_stats.items()],
-          "display: %.1f" % display,
-          "total: %.1f" % total,
-          "fps: %d" % round(1000 / total),
-          "frames dropped: %d" % cap.frames_dropped, sep="\n")
+        if e.args[0].startswith("ffprobe"):
+            stats = False
+        if reraise:
+            raise e
+    finally:
+        # Print stats
+        if stats:
+            profiler["total"].n_runs = profiler["display"].n_runs
+            profiler.print_stats()
+            print("fps: %d" % round(1e9 / profiler["total"].value))

@@ -1,6 +1,13 @@
 import sys
 import os
 
+"""
+Manage cursor in Windows or Linux terminal.
+
+By James Spencer https://stackoverflow.com/a/10455937
+
+"""
+
 if os.name == 'nt':
     import ctypes
 

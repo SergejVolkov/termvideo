@@ -6,7 +6,7 @@ import numpy as np
 from time import sleep
 from typing import Tuple
 
-from .utils import move_cursor, get_optimal_size, pool2d, \
+from .utils import move_cursor, get_optimal_size, \
     perf_counter_ms, GracefulKiller
 from .colors import color_palette
 from .colors.cmap import common as cmap_common
@@ -93,8 +93,6 @@ class ASCIIVideoCapture:
                           (self.src_h * self.chr_aspect[0]))
         else:
             self.out_w, self.out_h = self.out_size
-        self.stream_w = self.out_w * self.chr_aspect[0]
-        self.stream_h = self.out_h * self.chr_aspect[1]
 
         self.fps = eval(meta["streams"][0]["avg_frame_rate"])
         self.step = 1000 / self.fps
@@ -104,8 +102,8 @@ class ASCIIVideoCapture:
             loglevel="error",
             format="rawvideo",
             pix_fmt="rgb24",
-            vf=f"scale={self.stream_w}:{self.stream_h}:"
-               f"flags={'area' if self.stream_w < self.src_w else 'bicubic'}"
+            vf=f"scale={self.out_w}:{self.out_h}:"
+               f"flags={'area' if self.out_w < self.src_w else 'bicubic'}"
         ).run_async(pipe_stdout=True)
 
         # a:0
@@ -195,23 +193,19 @@ class ASCIIVideoCapture:
         # Read next frame from stream
         with self.profiler["ffmpeg"]:
             frame = np.frombuffer(self.read_frame(), dtype=np.uint8)
-            frame = frame.reshape(self.stream_h, self.stream_w, 3)
+            frame = frame.reshape(self.out_h, self.out_w, 3)
             # if self.frames_read % 40 == 0:
             #     cv2.imwrite(f"output/frame_{self.frames_read}.png", frame)
 
-        # Convert to output terminal character aspect ratio
-        with self.profiler["pool"]:
-            scaled = pool2d(frame.astype(np.float32), self.kernel, method="mean")
-
         with self.profiler["np convert"]:
             # Convert to indexed color
-            scaled = self.cmap(scaled).flatten()
+            index = self.cmap(frame).flatten()
 
             # Lower the number of escape codes by squashing
             # constant color sequences into one value
-            mask = np.ones(scaled.shape[0] + 1, dtype=bool)
-            mask[1:-1] = (scaled[1:] != scaled[:-1])
-            compressed = scaled[mask[:-1]]
+            mask = np.ones(index.shape[0] + 1, dtype=bool)
+            mask[1:-1] = (index[1:] != index[:-1])
+            compressed = index[mask[:-1]]
             counts = np.flatnonzero(mask)
             counts = counts[1:] - counts[:-1]
 
@@ -239,7 +233,7 @@ class ASCIIVideoCapture:
         """
         self.frames_read += 1
 
-        frame = self.video.stdout.read(self.stream_w * self.stream_h * 3)
+        frame = self.video.stdout.read(self.out_w * self.out_h * 3)
         if not frame:
             raise StopIteration
         return frame

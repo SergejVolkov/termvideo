@@ -1,7 +1,7 @@
 import os
 import sys
 import subprocess
-from colorama import Back
+from colorama import Back, Fore
 
 from .cursor import hide_cursor, show_cursor
 
@@ -17,12 +17,14 @@ class term_capture:
     Args:
         columns (int): Width of the terminal window in characters.
         lines (int): Height of the terminal window in characters.
+        clear (bool): Clear the terminal on exit. Defaults to True.
 
     """
 
-    def __init__(self, columns, lines):
+    def __init__(self, columns, lines, clear = True):
         self.columns = columns
         self.lines = lines
+        self.clear = clear
 
         term_size = os.get_terminal_size()
         self.restore_columns = term_size.columns
@@ -48,8 +50,8 @@ class term_capture:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Reset text color
-        sys.stdout.write(Back.RESET)
+        # Reset foreground color
+        sys.stdout.write(Back.RESET + Fore.RESET)
         sys.stdout.flush()
 
         # Show cursor
@@ -62,10 +64,12 @@ class term_capture:
                             str(self.restore_lines),
                             str(self.restore_columns),
                             "9001"])
-            os.system("cls")
+            if self.clear:
+                os.system("cls")
         else:
             sys.stdout.write(f"\033[8;{self.restore_lines};"
                              f"{self.restore_columns}t")
             sys.stdout.flush()
-            os.system("clear")
+            if self.clear:
+                os.system("clear")
         return False

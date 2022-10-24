@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..color_palette import Color
+from ..palette import Color
 
 
 def lagtrain(img: np.ndarray, back: int = 178,

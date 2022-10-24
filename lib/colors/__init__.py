@@ -1,1 +1,1 @@
-from .color_palette import Color, color_palette
+from . import ascii, ascii_color, back_color, bca, bcac, true_color

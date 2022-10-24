@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..color_palette import Color
+from ..palette import Color
 
 
 def bad_apple(img: np.ndarray) -> np.ndarray:

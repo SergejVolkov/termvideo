@@ -1,16 +1,17 @@
 import numpy as np
 
-from ..color_palette import rgb_values
+from ..palette import rgb_values
 
 
 def common(img: np.ndarray) -> np.ndarray:
     """
     Convert RGB image of size (H, W, 3) to indexed color (H, W).
 
-    See `colors.color_palette` for details on color palette.
+    See `colors.back_color.palette` for details on color palette.
 
     Args:
-        img (np.ndarray): Input RGB image.
+        img (np.ndarray): Input RGB image in (H, W, 3), [0, 255],
+            `dtype=np.uint8`.
 
     Returns:
         np.ndarray: Image in indexed color format.
@@ -18,4 +19,4 @@ def common(img: np.ndarray) -> np.ndarray:
     """
     img = np.expand_dims(img, -2)
     out = np.argmin(np.abs(img - np.expand_dims(rgb_values, (0, 1))).mean(axis=-1), axis=-1)
-    return out
+    return out.astype(np.uint8)

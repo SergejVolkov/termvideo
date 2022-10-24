@@ -4,12 +4,12 @@ import pyaudio
 import numpy as np
 
 from time import sleep
-from typing import Tuple
+from typing import Tuple, List
 
 from .utils import move_cursor, get_optimal_size, \
     perf_counter_ms, GracefulKiller
-from .colors import color_palette
-from .colors.cmap import common as cmap_common
+from .colors import back_color
+from .enums import Scale, Sync
 from .profile import Profile, Format
 
 
@@ -35,10 +35,15 @@ class ASCIIVideoCapture:
         chr_aspect (Tuple[int, int]): Size of the output terminal
             character in (width, height). Defaults to (1, 2).
         cmap ((img: np.ndarray) -> np.ndarray): Color mapping function.
-            Defaults to `colors.cmap.common`.
+            Defaults to `colors.back_color.cmap.common`.
             Converts RGB image of size (H, W, 3) to indexed color (H, W).
             See `colors` module for details.
-        sleep_overhead (int): Approximate sleep function overhead in ms.
+        palette (List[str]): String color values. Defaults to
+            `colors.back_color.palette`. See `colors` module for details.
+        speed (float): Playback speed. Defaults to 1.
+        no_audio (bool): Do not play audio track. Defaults to False.
+        sync (Sync): Video sync method. Defaults to `Sync.DROP_FRAMES`.
+        sleep_overhead (int): Approximate `time.sleep` overhead in ms.
             Defaults to 10 ms.
         audio_bit_depth (int): Output audio sample size in bits.
             Defaults to 16-bit audio.
@@ -48,12 +53,17 @@ class ASCIIVideoCapture:
     """
 
     def __init__(self, path, out_size = None, chr_aspect = (1, 2),
-                 cmap = cmap_common, sleep_overhead = 10,
-                 audio_bit_depth = 16, profiler = None):
+                 cmap = back_color.cmap.common, palette = back_color.palette,
+                 speed = 1, no_audio = False, sync = Sync.DROP_FRAMES,
+                 sleep_overhead = 10, audio_bit_depth = 16, profiler = None):
         self.path = path
         self.out_size = out_size
         self.chr_aspect = chr_aspect
         self.cmap = cmap
+        self.palette = palette
+        self.speed = speed
+        self.no_audio = True if self.speed != 1 else no_audio
+        self.sync = sync
         self.sleep_overhead = sleep_overhead
         self.audio_bit_depth = audio_bit_depth
         self.profiler = Profile(enabled=False) if profiler is None else profiler
@@ -95,7 +105,7 @@ class ASCIIVideoCapture:
             self.out_w, self.out_h = self.out_size
 
         self.fps = eval(meta["streams"][0]["avg_frame_rate"])
-        self.step = 1000 / self.fps
+        self.step = 1000 / self.fps / self.speed
 
         self.video = self.cap.output(
             "pipe:",
@@ -107,6 +117,10 @@ class ASCIIVideoCapture:
         ).run_async(pipe_stdout=True)
 
         # a:0
+        if self.no_audio:
+            self.audio = None
+            return
+
         try:
             self.audio_meta = [stream for stream in meta["streams"]
                                if stream["codec_type"] == "audio"][0]
@@ -182,8 +196,11 @@ class ASCIIVideoCapture:
 
         with self.profiler["actual sleep"]:
             if self.wait_time < -self.step:
-                while self.wait_time <= 0:
-                    self.drop_frame()
+                if self.sync == Sync.DROP_FRAMES:
+                    while self.wait_time <= 0:
+                        self.drop_frame()
+                elif self.sync != Sync.NONE:
+                    raise NotImplementedError(f"sync method {self.sync} not implemented")
             else:
                 if self.wait_time > self.sleep_overhead:
                     sleep((self.wait_time - self.sleep_overhead) / 1000)
@@ -212,7 +229,7 @@ class ASCIIVideoCapture:
         # Form the output string
         with self.profiler["py convert"]:
             converted = "".join([self.reset_seq] +
-                                [color_palette[c] + " " * count
+                                [self.palette[c] * count
                                  for c, count in zip(compressed, counts)])
         return converted
 

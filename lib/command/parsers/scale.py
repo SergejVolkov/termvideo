@@ -1,5 +1,5 @@
 from .base import BaseParser
-from lib.scale import Scale
+from lib.enums import Scale
 
 
 class ScaleParser(BaseParser):

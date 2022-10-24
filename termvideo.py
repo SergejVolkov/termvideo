@@ -6,9 +6,10 @@ from multiprocessing import freeze_support
 
 from lib.utils import get_manual, term_capture
 from lib.video import ASCIIVideoCapture
-from lib.scale import Scale
+from lib.enums import Scale, Sync
 from lib.profile import Profile
-from lib.command import Command, CmapParser, ScaleParser, StatsParser, HelpParser
+from lib.command import Command, CmapParser, ScaleParser, AspectParser, \
+    SpeedParser, NoAudioParser, SyncParser, StatsParser, HelpParser
 
 
 if __name__ == "__main__":
@@ -16,8 +17,10 @@ if __name__ == "__main__":
 
     # Parse command options
     cmd = Command(" ".join(sys.argv))
-    (cmap, scale, stats, help), args = cmd.parse_options(
-        parsers=[CmapParser(), ScaleParser(), StatsParser(), HelpParser()]
+    ((cmap, palette), scale, chr_aspect, speed,
+     no_audio, sync, stats, help), args = cmd.parse_options(
+        parsers=[CmapParser(), ScaleParser(), AspectParser(), SpeedParser(),
+                 NoAudioParser(), SyncParser(), StatsParser(), HelpParser()]
     )
 
     # Print help note
@@ -44,7 +47,12 @@ if __name__ == "__main__":
         with ASCIIVideoCapture(
             path,
             out_size,
-            cmap=cmap,
+            chr_aspect,
+            cmap,
+            palette,
+            speed,
+            no_audio,
+            sync,
             profiler=profiler
         ) as cap, term_capture(cap.out_w, cap.out_h), profiler["total"]:
             # Play video

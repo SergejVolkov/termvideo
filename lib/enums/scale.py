@@ -5,3 +5,13 @@ class Scale(Enum):
     RESIZE = 0
     STRETCH = 1
     CROP = 2
+
+    def __str__(self):
+        return self.name.lower()
+
+    @staticmethod
+    def from_string(s):
+        try:
+            return Scale[s.upper()]
+        except KeyError:
+            raise ValueError(f"no such option {s}")

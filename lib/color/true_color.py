@@ -1,4 +1,4 @@
-from ..ascii_color import ColorString
+from ..utils import ColorString
 
 
 class ColorPalette:
@@ -9,5 +9,5 @@ class ColorPalette:
         return ColorString(f"\033[48;2;{r};{g};{b}m")
 
 
-#: Foreground color + ASCII palette.
+#: True color palette.
 palette = ColorPalette()

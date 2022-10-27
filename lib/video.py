@@ -4,11 +4,11 @@ import pyaudio
 import numpy as np
 
 from time import sleep
-from typing import Tuple, List
+from typing import Tuple
 
-from .utils import move_cursor, get_optimal_size, \
-    perf_counter_ms, GracefulKiller
-from .colors import back_color
+from .utils import get_optimal_size, perf_counter_ms, GracefulKiller
+from .cmap.base import base_cmap
+from .cmap import back_color
 from .enums import Scale, Sync
 from .profile import Profile, Format
 
@@ -32,14 +32,11 @@ class ASCIIVideoCapture:
         out_size (Tuple[int, int]): Size of the output device in
             (columns, lines). Defaults to None (auto). Either columns
             or lines can be set to None to be deduced from the video size.
-        chr_aspect (Tuple[int, int]): Size of the output terminal
-            character in (width, height). Defaults to (1, 2).
-        cmap ((img: np.ndarray) -> np.ndarray): Color mapping function.
-            Defaults to `colors.back_color.cmap.common`.
-            Converts RGB image of size (H, W, 3) to indexed color (H, W).
+        chr_aspect (Tuple[int, int]): Size of the terminal character
+            in (width, height). Defaults to (15, 32).
+        cmap (base_cmap): Color mapping from RGB to terminal.
+            Defaults to `colors.back_color.common`.
             See `colors` module for details.
-        palette (List[str]): String color values. Defaults to
-            `colors.back_color.palette`. See `colors` module for details.
         speed (float): Playback speed. Defaults to 1.
         no_audio (bool): Do not play audio track. Defaults to False.
         sync (Sync): Video sync method. Defaults to `Sync.DROP_FRAMES`.
@@ -52,15 +49,15 @@ class ASCIIVideoCapture:
 
     """
 
-    def __init__(self, path, out_size = None, chr_aspect = (1, 2),
-                 cmap = back_color.cmap.common, palette = back_color.palette,
-                 speed = 1, no_audio = False, sync = Sync.DROP_FRAMES,
-                 sleep_overhead = 10, audio_bit_depth = 16, profiler = None):
+    def __init__(self, path, out_size = None, chr_aspect = (15, 32),
+                 cmap: base_cmap = back_color.common, speed = 1,
+                 no_audio = False, sync = Sync.DROP_FRAMES,
+                 sleep_overhead = 10, audio_bit_depth = 16,
+                 profiler = None):
         self.path = path
         self.out_size = out_size
         self.chr_aspect = chr_aspect
         self.cmap = cmap
-        self.palette = palette
         self.speed = speed
         self.no_audio = True if self.speed != 1 else no_audio
         self.sync = sync
@@ -72,8 +69,6 @@ class ASCIIVideoCapture:
 
         self.kernel = tuple(reversed(self.chr_aspect))
         self.audio_byte_depth = self.audio_bit_depth // 8
-
-        self.reset_seq = move_cursor(0, 0)
 
         self.killer = GracefulKiller()
         self.streaming = False
@@ -214,23 +209,8 @@ class ASCIIVideoCapture:
             # if self.frames_read % 40 == 0:
             #     cv2.imwrite(f"output/frame_{self.frames_read}.png", frame)
 
-        with self.profiler["np convert"]:
-            # Convert to indexed color
-            index = self.cmap(frame).flatten()
-
-            # Lower the number of escape codes by squashing
-            # constant color sequences into one value
-            mask = np.ones(index.shape[0] + 1, dtype=bool)
-            mask[1:-1] = (index[1:] != index[:-1])
-            compressed = index[mask[:-1]]
-            counts = np.flatnonzero(mask)
-            counts = counts[1:] - counts[:-1]
-
-        # Form the output string
-        with self.profiler["py convert"]:
-            converted = "".join([self.reset_seq] +
-                                [self.palette[c] * count
-                                 for c, count in zip(compressed, counts)])
+        # Convert to string
+        converted = self.cmap(frame)
         return converted
 
     def __enter__(self):

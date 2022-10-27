@@ -1,6 +1,35 @@
 import os
 import numpy as np
 
+from colorama import Back, Fore
+from enum import Enum
+
+from ..utils import ColorString
+
+
+class Color(Enum):
+    """
+    Terminal color name enum.
+
+    """
+
+    BLACK           = 0
+    RED             = 1
+    GREEN           = 2
+    YELLOW          = 3
+    BLUE            = 4
+    MAGENTA         = 5
+    CYAN            = 6
+    WHITE           = 7
+    LIGHTBLACK_EX   = 8
+    LIGHTRED_EX     = 9
+    LIGHTGREEN_EX   = 10
+    LIGHTYELLOW_EX  = 11
+    LIGHTBLUE_EX    = 12
+    LIGHTMAGENTA_EX = 13
+    LIGHTCYAN_EX    = 14
+    LIGHTWHITE_EX   = 15
+
 
 if os.name == "nt":
     #: ASCII color RGB values.
@@ -42,3 +71,24 @@ else:
         [  0, 255, 255],  # 14 light cyan
         [255, 255, 255]   # 15 light white
     ])
+
+#: Background color code strings.
+back_palette = [ColorString(getattr(Back, c.name)) for c in Color]
+
+#: Foreground color code strings.
+fore_palette = [ColorString(getattr(Fore, c.name)) for c in Color]
+
+#: Foreground colors with unique hues.
+_hcolor = [c for c in Color
+           if c not in [Color.BLACK,
+                        Color.WHITE,
+                        Color.LIGHTBLACK_EX]]
+
+#: Their color code strings.
+hpalette = [getattr(Fore, c.name) for c in _hcolor]
+
+#: Their RGB values.
+hrgb_values = rgb_values[[c.value for c in _hcolor]]
+
+#: Normalized RGB values.
+hrgb_norm = hrgb_values / np.max(hrgb_values, axis=-1, keepdims=True)

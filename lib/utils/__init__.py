@@ -1,3 +1,4 @@
+from .color_string import ColorString
 from .cursor import show_cursor, hide_cursor, move_cursor
 from .get_manual import get_manual
 from .get_optimal_size import get_optimal_size

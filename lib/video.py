@@ -1,4 +1,5 @@
 # import cv2
+import os
 import ffmpeg
 import pyaudio
 import numpy as np
@@ -37,6 +38,7 @@ class ASCIIVideoCapture:
         cmap (base_cmap): Color mapping from RGB to terminal.
             Defaults to `colors.back_color.common`.
             See `colors` module for details.
+        scale (Scale): Video scaling method. Defaults to `Scale.RESIZE`.
         speed (float): Playback speed. Defaults to 1.
         no_audio (bool): Do not play audio track. Defaults to False.
         sync (Sync): Video sync method. Defaults to `Sync.DROP_FRAMES`.
@@ -50,14 +52,15 @@ class ASCIIVideoCapture:
     """
 
     def __init__(self, path, out_size = None, chr_aspect = (15, 32),
-                 cmap: base_cmap = back_color.common, speed = 1,
-                 no_audio = False, sync = Sync.DROP_FRAMES,
+                 cmap: base_cmap = back_color.common, scale = Scale.RESIZE,
+                 speed = 1, no_audio = False, sync = Sync.DROP_FRAMES,
                  sleep_overhead = 10, audio_bit_depth = 16,
                  profiler = None):
         self.path = path
         self.out_size = out_size
         self.chr_aspect = chr_aspect
         self.cmap = cmap
+        self.scale = scale
         self.speed = speed
         self.no_audio = True if self.speed != 1 else no_audio
         self.sync = sync
@@ -84,11 +87,31 @@ class ASCIIVideoCapture:
                            if stream["codec_type"] == "video"][0]
         self.src_w = self.video_meta["width"]
         self.src_h = self.video_meta["height"]
+        self.fps = eval(meta["streams"][0]["avg_frame_rate"])
+        self.step = 1000 / self.fps / self.speed
+
+        # Video scaling
+        if self.scale == Scale.FIT_WINDOW:
+            self.term_w, self.term_h = get_optimal_size(self.src_w,
+                                                        self.src_h,
+                                                        self.chr_aspect)
+            self.out_size = self.term_w, self.term_h
+        else:
+            term_size = os.get_terminal_size()
+            self.term_w, self.term_h = term_size.columns, term_size.lines
+
+        if self.scale == Scale.STRETCH:
+            self.out_size = self.term_w, self.term_h
+
         if self.out_size is None:
-            self.out_w, self.out_h = get_optimal_size(self.src_w,
-                                                      self.src_h,
-                                                      self.chr_aspect)
-        elif self.out_size[1] is None:
+            aspect_cond = (self.term_w * chr_aspect[0] /
+                           (self.term_h * chr_aspect[1]) > self.src_w / self.src_h)
+            scale_cond = (self.scale == scale.CROP)
+            if aspect_cond != scale_cond:
+                self.out_size = None, self.term_h
+            else:
+                self.out_size = self.term_w, None
+        if self.out_size[1] is None:
             self.out_w = self.out_size[0]
             self.out_h = (self.out_w * self.src_h * self.chr_aspect[0] //
                           (self.src_w * self.chr_aspect[1]))
@@ -99,16 +122,19 @@ class ASCIIVideoCapture:
         else:
             self.out_w, self.out_h = self.out_size
 
-        self.fps = eval(meta["streams"][0]["avg_frame_rate"])
-        self.step = 1000 / self.fps / self.speed
+        filter = f"scale={self.out_w}:{self.out_h}:" \
+                 f"flags={'area' if self.out_w < self.src_w else 'bicubic'}"
+        if self.scale == Scale.RESIZE:
+            filter += f",pad={self.term_w}:{self.term_h}:-1:-1:color=black"
+        elif self.scale == scale.CROP:
+            filter += f",crop={self.term_w}:{self.term_h}"
 
         self.video = self.cap.output(
             "pipe:",
             loglevel="error",
             format="rawvideo",
             pix_fmt="rgb24",
-            vf=f"scale={self.out_w}:{self.out_h}:"
-               f"flags={'area' if self.out_w < self.src_w else 'bicubic'}"
+            vf=filter
         ).run_async(pipe_stdout=True)
 
         # a:0
@@ -205,7 +231,7 @@ class ASCIIVideoCapture:
         # Read next frame from stream
         with self.profiler["ffmpeg"]:
             frame = np.frombuffer(self.read_frame(), dtype=np.uint8)
-            frame = frame.reshape(self.out_h, self.out_w, 3)
+            frame = frame.reshape(self.term_h, self.term_w, 3)
             # if self.frames_read % 40 == 0:
             #     cv2.imwrite(f"output/frame_{self.frames_read}.png", frame)
 
@@ -230,7 +256,7 @@ class ASCIIVideoCapture:
         """
         self.frames_read += 1
 
-        frame = self.video.stdout.read(self.out_w * self.out_h * 3)
+        frame = self.video.stdout.read(self.term_w * self.term_h * 3)
         if not frame:
             raise StopIteration
         return frame

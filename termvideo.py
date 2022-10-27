@@ -25,26 +25,19 @@ def main():
     # Color mapping
     cmap = get_cmap(args.cmap)(profiler=profiler)
 
-    # Video scaling
-    out_size = None
-    if scale == Scale.STRETCH:
-        term_size = os.get_terminal_size()
-        out_size = term_size.columns, term_size.lines
-    elif scale == Scale.CROP:
-        raise NotImplementedError(f"scaling method {scale} not implemented")
-
     try:
         # Capture video and init terminal
         with ASCIIVideoCapture(
                 args.filename,
-                out_size,
+                None,
                 args.aspect,
                 cmap,
+                scale,
                 args.speed,
                 args.no_audio,
                 args.sync,
                 profiler=profiler
-        ) as cap, term_capture(cap.out_w, cap.out_h), profiler["total"]:
+        ) as cap, term_capture(cap.term_w, cap.term_h), profiler["total"]:
             # Play video
             for frame in cap:
                 with profiler["display"]:

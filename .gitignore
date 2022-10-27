@@ -1,6 +1,7 @@
 .idea
 *.iml
 __pycache__
+/legacy
 /output
 /videos
 /*test.py

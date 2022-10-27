@@ -7,8 +7,8 @@ def get_optimal_size(src_w, src_h, chr_aspect = (1, 2)):
     try:
         monitor_info = screeninfo.get_monitors()[0]
         screen_w, screen_h = monitor_info.width, monitor_info.height
-        work_w = screen_w - 4   # Approximate working area width
-        work_h = screen_h - 60  # Approximate working area height
+        work_w = screen_w       # Approximate working area width
+        work_h = screen_h - 45  # Approximate working area height
     except screeninfo.common.ScreenInfoError:
         work_w, work_h = 16, 9  # Ugly aspect ratio guess here
 

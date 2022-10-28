@@ -1,7 +1,7 @@
 # termvideo
 Video player for command terminal built on ASCII color codes, FFmpeg & PyAudio.
 
-[![alt text](https://raw.githubusercontent.com/SergejVolkov/termvideo/main/pic/bad_apple.png)](https://www.youtube.com/watch?v=C5_oAJy341Q)
+[![alt text](https://raw.githubusercontent.com/SergejVolkov/termvideo/main/pic/lagtrain.jpg)](https://www.youtube.com/watch?v=4NcLxLAtIA0)
 
 **Key features**
 

@@ -1,13 +1,16 @@
 # termvideo
 Video player for command terminal built on ASCII color codes, FFmpeg & PyAudio.
 
-![alt text](https://raw.githubusercontent.com/SergejVolkov/termvideo/main/pic/bad_apple.png)
-
-This is a short decription
+[![alt text](https://raw.githubusercontent.com/SergejVolkov/termvideo/main/pic/bad_apple.png)](https://www.youtube.com/watch?v=C5_oAJy341Q)
 
 **Key features**
 
-+ *Some feature*
++ *Realtime playback with audio*
++ *Customizable color mappings for render*
++ *Cross-platform (tested in Windows 10 cmd.exe and Ubuntu 20.04 bash)*
++ *Correct aspect ratio processing*
++ *Playback speed control*
++ *Comprehensible usage manual*
 
 ## Installation
 
@@ -36,13 +39,15 @@ Stop the playback with `Ctrl+C`.
 
 ## Usage
 
-If you wish to convert a video to terminal colors in your own way, you can create a custom color mapping function using numpy. The function receives an RGB image in numpy format (channels last) and outputs the converted image. Head over to `colors.cmap` module to see the examples.
+Various color mappings (ways to convert video to terminal colors) can be applied via `--cmap` option (`-c` for short). For example, if you wish to display a video as ASCII art, use
 
-Several scaling options are available through command options. See full usage manual by running:
+`python termvideo.py FILENAME -c ascii`
+
+`-c bca` for a hybrid ascii and background color cmap, `-c true_color` for the full RGB color (if your terminal supports it).
+
+Several scaling options are available through command options, e.g. `-s crop`, `-s stretch`. See the full usage manual by running:
 
 `python termvideo.py -h`
 
 ## TODO
-+ Complete README
 + Docstrings
-+ 'Crop' scaling mode

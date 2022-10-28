@@ -40,9 +40,8 @@ class base_cmap(ABC):
         """
         pass
 
-    @staticmethod
     @abstractmethod
-    def compress(index):
+    def compress(self, index):
         """
         Compress image.
 

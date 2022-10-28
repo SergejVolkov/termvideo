@@ -13,7 +13,7 @@ class common(base_multi_cmap):
     num_colors = 256
 
     def __init__(self, eps: float = 1e-3, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(interlaced=True, **kwargs)
         self.eps = eps
 
         self.reduction = 256 // self.num_colors

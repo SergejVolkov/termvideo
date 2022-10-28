@@ -20,8 +20,7 @@ class base_single_cmap(base_cmap):
         """
         pass
 
-    @staticmethod
-    def compress(index: np.ndarray) -> Tuple[Sequence, Sequence]:
+    def compress(self, index: np.ndarray) -> Tuple[Sequence, Sequence]:
         index = index.flatten()
         mask = np.ones(index.shape[0] + 1, dtype=bool)
         mask[1:-1] = (index[1:] != index[:-1])
